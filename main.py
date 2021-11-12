@@ -136,7 +136,7 @@ class ChoiceHandler:
                 print('Špatný výběr. Vložte číslo mezi 1 až 3.')
 
     def select_iv(self):
-        while self.iv is None:
+        while self.iv is None and self.decryptMode is None:
             self.print_menu_iv_selection()
             option = ''
             try:
