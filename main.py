@@ -4,9 +4,7 @@ import string
 from base64 import b64encode, b64decode
 from pathlib import Path
 from tkinter import Tk, filedialog
-
 from Crypto.Cipher import AES
-
 
 # -*- coding: utf-8 -*-
 
