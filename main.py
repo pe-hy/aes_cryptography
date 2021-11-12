@@ -1,5 +1,6 @@
 import json
-import unicodedata
+import secrets
+import string
 from base64 import b64encode, b64decode
 from pathlib import Path
 from tkinter import Tk, filedialog
@@ -19,6 +20,7 @@ class ChoiceHandler:
         self.mode = None
         self.parsedMessage = None
         self.keyFromInput = None
+        self.iv = None
         self.menu_options_cypher_selection = {
             1: 'Zašifrovat',
             2: 'Dešifrovat',
@@ -41,8 +43,8 @@ class ChoiceHandler:
             3: 'Exit',
         }
         self.menu_options_initialization_vector_selection = {
-            1: 'plain64',
-            2: 'essiv',
+            1: 'Secure-random',
+            2: 'Vlastní',
             3: 'Exit',
         }
         self.menu_options_keep_going = {
@@ -128,6 +130,25 @@ class ChoiceHandler:
                 self.mode = "eax"
             elif option == 2:
                 self.mode = "cfb"
+                self.select_iv()
+            elif option == 3:
+                print('Program ukončen.')
+                exit()
+            else:
+                print('Špatný výběr. Vložte číslo mezi 1 až 3.')
+
+    def select_iv(self):
+        while self.iv is None:
+            self.print_menu_iv_selection()
+            option = ''
+            try:
+                option = int(input('Zvolte způsob generování inicializačního vektoru: '))
+            except:
+                print('Špatný výběr. Zkuste to znovu.')
+            if option == 1:
+                self.secure_random_iv()
+            elif option == 2:
+                self.custom_iv()
             elif option == 3:
                 print('Program ukončen.')
                 exit()
@@ -230,8 +251,8 @@ class ChoiceHandler:
         key = ""
         while len(key) != 16 or not str.isascii(key):
             key = input("Vložte tajný klíč (16 znaků): ")
-            print("Vložený počet znaků: ", len(key))
             if len(key) != 16:
+                print("Vložený počet znaků: ", len(key))
                 print("Vložili jste nevhodný počet znaků. Klíč musí mít délku 16 znaků.")
             elif not str.isascii(key):
                 print("Vložili jste klíč s diakritikou. Použijte znaky ASCII.")
@@ -300,33 +321,33 @@ class ChoiceHandler:
             print("Soubor uložen jako encrypted.txt.\n")
 
         if self.mode == "cfb" and len(self.keyFromInput) == 16:
-            cipher = AES.new(self.keyFromInput, AES.MODE_CFB)
+            decoded_iv = self.iv.decode()
+            cipher = AES.new(self.keyFromInput, AES.MODE_CFB, iv=self.iv)
             ct_bytes = cipher.encrypt(self.parsedMessage)
-            iv = b64encode(cipher.iv).decode('utf-8')
             ct = b64encode(ct_bytes).decode('utf-8')
-            result = json.dumps({'iv': iv, 'ciphertext': ct})
+            result = json.dumps({'iv': decoded_iv, 'ciphertext': ct})
             with open("encrypted.txt", "w") as file1:
                 file1.write(result)
             print("Zašifrováno pomocí AES128, mód CFB")
             print("Soubor uložen jako encrypted.txt.\n")
 
         if self.mode == "cfb" and len(self.keyFromInput) == 32:
-            cipher = AES.new(self.keyFromInput, AES.MODE_CFB)
+            decoded_iv = self.iv.decode()
+            cipher = AES.new(self.keyFromInput, AES.MODE_CFB, iv=self.iv)
             ct_bytes = cipher.encrypt(self.parsedMessage)
-            iv = b64encode(cipher.iv).decode('utf-8')
             ct = b64encode(ct_bytes).decode('utf-8')
-            result = json.dumps({'iv': iv, 'ciphertext': ct})
+            result = json.dumps({'iv': decoded_iv, 'ciphertext': ct})
             with open("encrypted.txt", "w") as file1:
                 file1.write(result)
             print("Zašifrováno pomocí AES256, mód CFB")
             print("Soubor uložen jako encrypted.txt.\n")
 
         if self.mode == "cfb" and len(self.keyFromInput) == 24:
-            cipher = AES.new(self.keyFromInput, AES.MODE_CFB)
+            decoded_iv = self.iv.decode()
+            cipher = AES.new(self.keyFromInput, AES.MODE_CFB, iv=self.iv)
             ct_bytes = cipher.encrypt(self.parsedMessage)
-            iv = b64encode(cipher.iv).decode('utf-8')
             ct = b64encode(ct_bytes).decode('utf-8')
-            result = json.dumps({'iv': iv, 'ciphertext': ct})
+            result = json.dumps({'iv': decoded_iv, 'ciphertext': ct})
             with open("encrypted.txt", "w") as file1:
                 file1.write(result)
             print("Zašifrováno pomocí AES128, mód CFB")
@@ -363,9 +384,10 @@ class ChoiceHandler:
                 with open(self.filename, 'r') as file:
                     encrypted = file.read()
                 b64 = json.loads(encrypted)
-                iv = b64decode(b64['iv'])
+                iv = b64['iv']
+                encoded_iv = iv.encode()
                 ct = b64decode(b64['ciphertext'])
-                cipher = AES.new(self.keyFromInput, AES.MODE_CFB, iv=iv)
+                cipher = AES.new(self.keyFromInput, AES.MODE_CFB, iv=encoded_iv)
                 data = cipher.decrypt(ct)
                 if len(data) >= 100:
                     print("Dešifrovaná zpráva je příliš dlouhá. Výpis prvních 100 znaků: ")
@@ -398,7 +420,30 @@ class ChoiceHandler:
         self.mode = None
         self.parsedMessage = None
         self.keyFromInput = None
+        self.iv = None
         ch.start()
+
+    def print_menu_iv_selection(self):
+        for key in self.menu_options_initialization_vector_selection.keys():
+            print(key, '--', self.menu_options_initialization_vector_selection[key])
+
+    def secure_random_iv(self):
+        rand = ''.join((secrets.choice(string.ascii_letters + string.digits + string.punctuation) for i in range(16)))
+        rand.encode()
+        random_as_byte_array = str.encode(rand)
+        self.iv = random_as_byte_array
+
+    def custom_iv(self):
+        temp = ""
+        while len(temp) != 16 or not str.isascii(temp):
+            temp = input("Vložte inicializační vektor (délka 16 bytů): ")
+            if len(temp) != 16:
+                print("Vložený počet znaků: ", len(temp))
+                print("Vložili jste nevhodný počet znaků. Inicializační vektor musí mít délku 16 znaků")
+            elif not str.isascii(temp):
+                print("Vložili jste inicializační vektor s diakritikou. Použijte znaky ASCII.")
+            else:
+                self.iv = temp.encode("utf-8")
 
 
 if __name__ == '__main__':
@@ -406,7 +451,7 @@ if __name__ == '__main__':
           "\nProgram slouží k zašifrování libovolného textu ze vstupu uživatele či z textového souboru s příponou .txt."
           "\nProgram používá šifrovací algoritmus AES. Na výběr jsou 3 délky klíčů - 128 bitů, 192 bitů a 256 bitů."
           "\nK dispozici je volba dvou módů šifrování - EAX a CFB. EAX nevyžaduje zadání inicializačního vektoru."
-          "\nCFB používá ke generování inicializačního vektoru secure random."
+          "\nU módu CFB lze inicializační vektor zvolit - buď zadán uživatelem nebo vygenerován náhodně."
           "\nDešifrování lze provést tak, že uživatel zná délku skrytého kódu, samotný skrytý kód a mód použitý při "
           "zašifrování. "
           "\nDešifrovat lze pouze textový soubor obsahující zašifrovaný řetězec."
