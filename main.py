@@ -190,9 +190,8 @@ class ChoiceHandler:
         window.withdraw()
         try:
             self.filename = filedialog.askopenfilename(parent=window,
-                                                       initialdir="examples",
                                                        title="Vyberte textový soubor",
-                                                       filetypes=(("Text files", "*.txt"), ("All files", "*")))
+                                                       filetypes=(("Text files", "*.txt"),))
             return self.filename
         except:
             print("Zvolte soubor!")
@@ -489,8 +488,6 @@ class ChoiceHandler:
         ch.start()
 
     # main - spouští program
-
-
 if __name__ == '__main__':
     print("\n##----------------------- INFORMACE O PROGRAMU -----------------------##\n"
           "\nProgram slouží k zašifrování libovolného textu ze vstupu uživatele či z textového souboru s příponou .txt."
