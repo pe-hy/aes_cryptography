@@ -145,7 +145,7 @@ class ChoiceHandler:
 
     # metoda, která se uživatele ptá, jakým způsobem chce vygenerovat IV, buď náhodně nebo může zadat sám.
     def select_iv(self):
-        while self.iv is None:
+        while self.iv is None and self.decryptMode is None:
             self.print_menu_iv_selection()
             option = ''
             try:
