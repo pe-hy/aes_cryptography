@@ -1,15 +1,16 @@
 import json
+import os
 import secrets
 import string
 from base64 import b64encode, b64decode
 from pathlib import Path
 from tkinter import Tk, filedialog
+
 from Crypto.Cipher import AES
 
-# -*- coding: utf-8 -*-
-
+# Hlavní třída obsahující logiku aplikace
 class ChoiceHandler:
-
+    # Konstruktor
     def __init__(self):
         self.decryptFilename = None
         self.filename = None
@@ -50,6 +51,8 @@ class ChoiceHandler:
             2: 'Ne (exit)',
         }
 
+    # metoda na výběr typu běhu aplikace - buď zašifrovat nebo dešifrovat.
+    # následně volá další metody
     def start(self):
         while self.encryptMode is None or self.decryptMode is None:
             self.print_menu_cypher_selection()
@@ -78,6 +81,8 @@ class ChoiceHandler:
             else:
                 print('Špatný výběr. Vložte číslo mezi 1 až 3.')
 
+    # metoda na výběr, jestli chceme načíst textový soubor nebo zadat text na šifrování ručně
+    # pokud uživatel zvolil v předchozím kroku dešifrování, pak vyjede dialog k výběru textového souboru
     def select_input(self):
         if self.encryptMode:
             while self.parsedMessage is None:
@@ -100,6 +105,7 @@ class ChoiceHandler:
             self.open_file_text()
             print("Načtěte soubor, který chcete dešifrovat.")
 
+    # metoda, která se uživatele ptá, zda-li chce pokračovat odznovu (volá se úplně na konci po dešifrování nebo šifrování).
     def keep_going(self):
         if self.encryptMode or self.decryptMode:
             while True:
@@ -116,6 +122,7 @@ class ChoiceHandler:
                 else:
                     print('Špatný výběr. Vložte číslo mezi 1 až 2.')
 
+    # metoda, která se uživatele ptá, jaký mód chce využít k šifrování - EAX nebo CFB
     def select_mode(self):
         while self.mode is None:
             self.print_menu_mode()
@@ -128,13 +135,15 @@ class ChoiceHandler:
                 self.mode = "eax"
             elif option == 2:
                 self.mode = "cfb"
-                self.select_iv()
+                if self.encryptMode is True:
+                    self.select_iv()
             elif option == 3:
                 print('Program ukončen.')
                 exit()
             else:
                 print('Špatný výběr. Vložte číslo mezi 1 až 3.')
 
+    # metoda, která se uživatele ptá, jakým způsobem chce vygenerovat IV, buď náhodně nebo může zadat sám.
     def select_iv(self):
         while self.iv is None:
             self.print_menu_iv_selection()
@@ -153,6 +162,7 @@ class ChoiceHandler:
             else:
                 print('Špatný výběr. Vložte číslo mezi 1 až 3.')
 
+    # metoda, která se uživatele ptá, jakou délku klíče chce
     def select_key(self):
         while self.keyFromInput is None:
             self.print_menu_keys()
@@ -173,6 +183,7 @@ class ChoiceHandler:
             else:
                 print('Špatný výběr. Vložte číslo mezi 1 až 4.')
 
+    # metoda která vytváří dialog k výběru souboru
     def open_file_text(self):
         window = Tk()
         window.wm_attributes('-topmost', 1)
@@ -187,27 +198,40 @@ class ChoiceHandler:
             print("Zvolte soubor!")
             return
 
+    # metoda, která načte do paměti zprávu, kterou zadal uživatel k zašifrování
     def get_input_text_from_user(self):
         input_msg = input("Vložte zprávu k zašifrování: ")
         return input_msg
 
+    # metoda, která parsuje načtený textový soubor (přesněji vezme jeho obsah a zakóduje do bytové podoby)
     def parse_input_file_for_encryption(self):
-        self.open_file_text()
-        temp = Path(self.filename).read_text()
+        while self.filename is None or self.filename == '':
+            print("Nevybraný soubor. Vyberte soubor znovu.")
+            self.open_file_text()
+
+        if os.path.isfile(self.filename):
+            temp = Path(self.filename).read_text()
+        else:
+            return
+
         self.parsedMessage = str.encode(temp)
 
+    # metoda, která parsuje zprávu, kterou uživatel zadal (převod na byty)
     def parse_input_text_from_user(self):
         temp = str(self.get_input_text_from_user())
         self.parsedMessage = str.encode(temp)
 
+    # metoda, která vypisuje nabídky pro uživatele (tyto metody se vážou k select_input(), select_mode() atd.)
     def print_menu_input_msg(self):
         for key in self.menu_options_input_message.keys():
             print(key, '--', self.menu_options_input_message[key])
 
+    # metoda, která vypisuje nabídky pro uživatele (tyto metody se vážou k select_input(), select_mode() atd.)
     def print_menu_keep_going(self):
         for key in self.menu_options_keep_going.keys():
             print(key, '--', self.menu_options_keep_going[key])
 
+    # ukáže uživateli v konzoli obsah načteného textového souboru, pokud je moc dlouhý, ořeže jej a vypíše kolik znaků ještě zpráva obsahuje
     def show_input_file_as_text(self):
         self.parse_input_file_for_encryption()
         if len(self.parsedMessage) > 100:
@@ -222,6 +246,7 @@ class ChoiceHandler:
 
         print("\n--------- KONEC ZPRÁVY ---------\n")
 
+    # ukáže uživateli v konzoli jeho zprávu k zašifrování, kterou vložil ručně
     def show_input_text(self):
         self.parse_input_text_from_user()
         print("\nVložená zpráva k zašifrování: \n")
@@ -233,18 +258,27 @@ class ChoiceHandler:
             print(self.parsedMessage.decode())
         print("\n--------- KONEC ZPRÁVY ---------\n")
 
+    # metoda, která vypisuje nabídky pro uživatele (tyto metody se vážou k select_input(), select_mode() atd.)
     def print_menu_keys(self):
         for key in self.menu_options_key_selection.keys():
             print(key, '--', self.menu_options_key_selection[key])
 
+    # metoda, která vypisuje nabídky pro uživatele (tyto metody se vážou k select_input(), select_mode() atd.)
     def print_menu_mode(self):
         for key in self.menu_options_mode_selection.keys():
             print(key, '--', self.menu_options_mode_selection[key])
 
+    # metoda, která vypisuje nabídky pro uživatele (tyto metody se vážou k select_input(), select_mode() atd.)
     def print_menu_cypher_selection(self):
         for key in self.menu_options_cypher_selection.keys():
             print(key, '--', self.menu_options_cypher_selection[key])
 
+    # metoda, která vypisuje nabídky pro uživatele (tyto metody se vážou k select_input(), select_mode() atd.)
+    def print_menu_iv_selection(self):
+        for key in self.menu_options_initialization_vector_selection.keys():
+            print(key, '--', self.menu_options_initialization_vector_selection[key])
+
+    # metoda, která požaduje po uživateli správnou délku klíče, dle délky, kterou si vybral v jednom z kroků
     def input_key_128(self):
         key = ""
         while len(key) != 16 or not str.isascii(key):
@@ -259,6 +293,7 @@ class ChoiceHandler:
                 self.keyFromInput = keyasbytearray
                 return key
 
+    # metoda, která požaduje po uživateli správnou délku klíče, dle délky, kterou si vybral v jednom z kroků
     def input_key_256(self):
         key = ""
         while len(key) != 32 or not str.isascii(key):
@@ -273,6 +308,7 @@ class ChoiceHandler:
                 self.keyFromInput = keyasbytearray
                 return key
 
+    # metoda, která požaduje po uživateli správnou délku klíče, dle délky, kterou si vybral v jednom z kroků
     def input_key_192(self):
         key = ""
         while len(key) != 24 or not str.isascii(key):
@@ -287,6 +323,8 @@ class ChoiceHandler:
                 self.keyFromInput = keyasbytearray
                 return key
 
+    # hlavní metoda pro zašifrování, obsahuje rozhodování dle výběru módu a délky klíče uživatele,
+    # následně zašifruje zprávu a uloží ji do textového souboru encrypted.txt
     def encryption(self):
 
         if self.mode == "eax" and len(self.keyFromInput) == 16:
@@ -351,6 +389,8 @@ class ChoiceHandler:
             print("Zašifrováno pomocí AES128, mód CFB")
             print("Soubor uložen jako encrypted.txt.\n")
 
+    # hlavní metoda pro dešifrování, opět se rozhoduje dle uživatelových předchozích voleb módu/délky klíče
+    # taktéž vypisuje dešifrovanou zprávu do konzole a pokud je příliš dlouhá, tak pouze prvních 100 znaků
     def decryption(self):
         try:
             if self.mode == "eax":
@@ -405,32 +445,25 @@ class ChoiceHandler:
         except:
             print("\nNelze dešifrovat. Špatně zvolený mód, délka tajného klíče nebo chybný klíč.")
 
+    # metoda slouží k parsování souboru k dešifrování (jeho obsah se uloží do třídní proměnné)
     def parse_input_file_for_decryption(self):
         self.open_file_text()
+        while self.filename == '':
+            print("Nevybraný soubor. Vyberte soubor znovu.")
+            self.open_file_text()
+
         temp = open(self.filename, "rb")
         self.parsedMessage = temp
 
-    def restart_app(self):
-        self.decryptFilename = None
-        self.filename = None
-        self.decryptMode = None
-        self.encryptMode = None
-        self.mode = None
-        self.parsedMessage = None
-        self.keyFromInput = None
-        self.iv = None
-        ch.start()
-
-    def print_menu_iv_selection(self):
-        for key in self.menu_options_initialization_vector_selection.keys():
-            print(key, '--', self.menu_options_initialization_vector_selection[key])
-
+    # metoda, která generuje náhodný IV (pomocí knihovny secrets, která se používá pro kryptograficky bezpečné generování náhodných čísel)
+    # následně string převede do bytů
     def secure_random_iv(self):
         rand = ''.join((secrets.choice(string.ascii_letters + string.digits + string.punctuation) for i in range(16)))
         rand.encode()
         random_as_byte_array = str.encode(rand)
         self.iv = random_as_byte_array
 
+    # metoda, která vezme IV z konzole od uživatele, uloží do proměnné a převede do bytů
     def custom_iv(self):
         temp = ""
         while len(temp) != 16 or not str.isascii(temp):
@@ -443,13 +476,27 @@ class ChoiceHandler:
             else:
                 self.iv = temp.encode("utf-8")
 
+    # metoda, která vynuluje globální proměnné - slouží k restartování běhu aplikace po volbě uživatele.
+    def restart_app(self):
+        self.decryptFilename = None
+        self.filename = None
+        self.decryptMode = None
+        self.encryptMode = None
+        self.mode = None
+        self.parsedMessage = None
+        self.keyFromInput = None
+        self.iv = None
+        ch.start()
+
+    # main - spouští program
+
 
 if __name__ == '__main__':
     print("\n##----------------------- INFORMACE O PROGRAMU -----------------------##\n"
           "\nProgram slouží k zašifrování libovolného textu ze vstupu uživatele či z textového souboru s příponou .txt."
           "\nProgram používá šifrovací algoritmus AES. Na výběr jsou 3 délky klíčů - 128 bitů, 192 bitů a 256 bitů."
           "\nK dispozici je volba dvou módů šifrování - EAX a CFB. EAX nevyžaduje zadání inicializačního vektoru."
-          "\nU módu CFB lze inicializační vektor zvolit - buď zadán uživatelem nebo vygenerován náhodně."
+          "\nU módu CFB lze inicializační vektor zvolit - buď jej zadá uživatel, nebo je vygenerován náhodně."
           "\nDešifrování lze provést tak, že uživatel zná délku skrytého kódu, samotný skrytý kód a mód použitý při "
           "zašifrování. "
           "\nDešifrovat lze pouze textový soubor obsahující zašifrovaný řetězec."
